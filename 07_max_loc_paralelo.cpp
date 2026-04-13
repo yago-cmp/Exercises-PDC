@@ -10,15 +10,15 @@ int main (int argc, char *argv[]){
   srand(time(NULL));
   int i;
   double x[N];
-  double max_global, maxval = 0.0;
-  int maxloc_global, maxloc = 0;
-  int qtd = 0;
+  double max_global = 0.0, maxval = 0.0;
+  int maxloc_global = 0, maxloc = 0;
+  int qtd = 0, qtd_global = 0;
 
   for(i=0; i < N;i++)
     x[i] = rand() % 999;
     
   gettimeofday(&tstart, NULL);
-  #pragma omp parallel num_threads(4) private(i, maxval, maxloc) shared(max_global, maxloc_global, qtd)
+  #pragma omp parallel num_threads(4) private(i, maxval, maxloc, qtd) shared(max_global, maxloc_global, qtd_global)
   {
       #pragma omp for // paraleliza a busca
         for (i=0; i < N; i++) {
@@ -34,9 +34,12 @@ int main (int argc, char *argv[]){
       #pragma omp critical // evita race condition, compara o max local de cada thread
       {    
           if(maxval > max_global){
+            qtd_global = qtd;            
             max_global = maxval;
             maxloc_global = maxloc;
           }
+          else if(maxval == max_global)
+            qtd_global += qtd;
       }      
   }
   gettimeofday(&tend, NULL);
