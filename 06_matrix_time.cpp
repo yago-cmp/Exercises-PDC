@@ -41,7 +41,7 @@ int main(int argc, char * argv[])
    gettimeofday(&tend, NULL);
    long tempo = (tend.tv_sec * 1000000 + tend.tv_usec)-(tstart.tv_sec * 1000000 + tstart.tv_usec);
 
-    printf("%ld microssecs\n", tempo);
+    printf("%ld", tempo);
 
     /*for (i=0; i<N; i++)
         for (j=0; j<N; j++)
