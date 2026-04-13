@@ -10,9 +10,9 @@ int main (int argc, char *argv[]){
   srand(time(NULL));
   int i;
   double x[N];
-  double max_global = 0.0, maxval = 0.0;
-  int maxloc_global = 0, maxloc = 0;
-  int qtd = 0, qtd_global = 0;
+  double max_global = 0.0, maxval;
+  int maxloc_global = 0, maxloc;
+  int qtd_global = 0, qtd;
 
   for(i=0; i < N;i++)
     x[i] = rand() % 999;
@@ -20,6 +20,9 @@ int main (int argc, char *argv[]){
   gettimeofday(&tstart, NULL);
   #pragma omp parallel num_threads(4) private(i, maxval, maxloc, qtd) shared(max_global, maxloc_global, qtd_global)
   {
+      double maxval = 0.0;
+      int maxloc = 0;
+      int qtd = 0;
       #pragma omp for // paraleliza a busca
         for (i=0; i < N; i++) {
           if (x[i] >= maxval) {
@@ -46,7 +49,7 @@ int main (int argc, char *argv[]){
 
   long tempo = (tend.tv_sec * 1000000 + tend.tv_usec)-(tstart.tv_sec * 1000000 + tstart.tv_usec);
 
-  printf("Maximum value: %f  - Loc: %d - QTD: %d - Tempo: %ld us\n", max_global, maxloc_global, qtd, tempo);
+  printf("Maximum value: %f  - Loc: %d - QTD: %d - Tempo: %ld us\n", max_global, maxloc_global, qtd_global, tempo);
   return 0;
 }
 
