@@ -57,7 +57,6 @@ uint** makeSquareMatrix(uint n)
 	}
 
 	return B;
-
 }
 
 /***Read a undirected graph from @p input
@@ -97,65 +96,49 @@ uint** readFile(std::istream& input, uint& n)
 	return M;
 }
 
-
-/**********************************************************************
- * MAIN ALGORITHM
- **********************************************************************/
-
+// FUNÇÃO PRINCIPAL ----------------------------------------------
 
 double findClusterCoefficient(uint** M, uint n)
 {
-    #pragma omp parallel num_threads(4)
-    {
+
 	double partial_cc = 0.0;
-	std::vector<uint> neighbors;
 
-	neighbors.reserve(n);
+	#pragma omp parallel num_threads(4) reduction(+:partial_cc) shared(M, n)
+	{
+		std::vector<uint> neighbors; // cria uma vizinhança para cada thread
+		uint n_triangles = 0; // cria uma contagem de triangulos para cada thread
+		neighbors.reserve(n); // reserva até n vizinhos
 
-	// For each node
-	for (uint i = 0; i < n; ++i) {
-		// Set things up for this iteration
-		neighbors.clear();
-		uint n_triangles = 0;
-		// Finds i's neighborhood
-		for (uint j = 0; j < n; ++j) {
-			if ( i != j && M[i][j]) {
-				neighbors.push_back(j);
-			}
-		}
-		// Find the number of clusters in i's neighborhood
-		if (neighbors.size() < 2) {
-			// At least two neighbors are need in order to
-			// be able to calc. i's Clustering Coefficient
-			continue;
-		}
-		const uint nei_len = neighbors.size();
-		for (uint j = 0; j < nei_len; ++j) {
-			uint u = neighbors[j];
-			for (uint k = j; k < nei_len; k ++) {
-				uint v = neighbors[k];
-				if (M[u][v]) {
-					++n_triangles;
+		#pragma omp for schedule(dynamic, 64) // for dinamico, 64 (tamanho do barramento da cpu, 64bits)
+			for (uint i = 0; i < n; ++i) { // para cada vértice:
+				neighbors.clear(); // zera os vizinhos
+				n_triangles = 0; // zera os triangulos
+
+				for (uint j = 0; j < n; ++j) //varre a linha i da matriz
+					if ( i != j && M[i][j]) //caso i tenha uma conexão com j (M[i][j] = 1)
+						neighbors.push_back(j); //adiciona j ao vetor de vizinhos de i
+
+				const uint n_viz = neighbors.size(); //No de vizinhos de i
+
+				if (n_viz < 2) //caso i tenha menos de 2 vizinhos (não forma triangulo)
+					continue; // passa para o próximo vértice i
+				
+				for (uint j = 0; j < n_viz; ++j) { // para cada vizinho de i
+					uint u = neighbors[j]; // u = vizinho de i
+					for (uint k = j; k < n_viz; k ++) { // para cada Outro vizinho de i
+						uint v = neighbors[k]; // v = outro vizinho de i
+						n_triangles += M[u][v]; // se u e v são vizinhos entre si, temos um triângulo
+						// M[u][v] é sempre 0 ou 1
+					}
 				}
+				partial_cc += 2 * n_triangles / double(n_viz * (n_viz - 1)); //indicativo de reduction
 			}
-		}
-		// Remember: The graph is undireted, so M[u][v] is treated as
-		// being equivalent to M[v][u]. But in the loop above we only
-		// accounted for one of those edges (namely, M[u][v]). Thus
-		// n_triangles should be doubled.
-		// Also notice that the maximum number of clusters between
-		// i's neighbors is nei_len * (nei_len - 1)
-		partial_cc += 2 * n_triangles / double(nei_len * (nei_len - 1));
-	}
-}
+	} // termino da regiao paralela, particla_cc se junta somando
+
 	return partial_cc / n;
 }
+// ---------------------------------------------------------------------------
 
-
-
-/**********************************************************************
- * MAIN APP LOGIC
- **********************************************************************/
 
 
 int main(int argc, char* argv[])
