@@ -109,7 +109,7 @@ double findClusterCoefficient(uint** M, uint n)
 		uint n_triangles = 0; // cria uma contagem de triangulos para cada thread
 		neighbors.reserve(n); // reserva até n vizinhos
 
-		#pragma omp for schedule(dynamic, 64) // for dinamico, 64 (tamanho da linha da cache, 64bits)
+		#pragma omp for schedule(dynamic, 64) // for dinamico, 64 chunk size
 			for (uint i = 0; i < n; ++i) { // para cada vértice:
 				neighbors.clear(); // zera os vizinhos
 				n_triangles = 0; // zera os triangulos
