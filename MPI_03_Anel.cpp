@@ -20,6 +20,8 @@ int main(int argc, char** argv) {
     if (rank == 0) {
         MPI_Send(&number, 1, MPI_INT, rank+1, tag, MPI_COMM_WORLD);
         printf("Processo %d enviou %d para o processo %d\n", rank, number, rank+1);  
+        MPI_Recv(&rec, 1, MPI_INT, tam-1, tag, MPI_COMM_WORLD, &status);
+        printf("Processo %d recebeu %d do processo %d\n", rank, rec, tam-1);   
     }
     else{
         MPI_Recv(&rec, 1, MPI_INT, rank-1, tag, MPI_COMM_WORLD, &status);
@@ -33,11 +35,6 @@ int main(int argc, char** argv) {
             MPI_Send(&rec, 1, MPI_INT, rank+1, tag, MPI_COMM_WORLD);
             printf("Processo %d enviou %d para o processo %d\n", rank, rec, rank+1);   
         }
-    }
-
-    if(rank == 0){
-        MPI_Recv(&rec, 1, MPI_INT, tam-1, tag, MPI_COMM_WORLD, &status);
-        printf("Processo %d recebeu %d do processo %d\n", rank, rec, tam-1);     
     }
 
     MPI_Finalize();
