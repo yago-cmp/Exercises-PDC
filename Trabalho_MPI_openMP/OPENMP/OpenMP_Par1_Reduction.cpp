@@ -70,6 +70,7 @@ uint** makeSquareMatrix(uint n)
  * @warning Errors reading the number of nodes in the graph will throw an
  * 	exception.
  */
+
 uint** readFile(std::istream& input, uint& n)
 {
 	uint** M = NULL;
