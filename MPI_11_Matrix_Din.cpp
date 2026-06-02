@@ -16,7 +16,7 @@ int main(int argc, char * argv[])
     int *cc_loc;
 
     int tagA = 1; // enviar matriz A
-    int tagB = 2; // enviar matriz B
+    int tagB = 2; // enviar matriz B NAO UTILIZADO, COMM COLETIVA TEM TAGS IMPLICITAS
     int tagC = 3; // enviar matriz C
 
     int N = 4;
@@ -36,28 +36,32 @@ int main(int argc, char * argv[])
         if (argc > 1) N = atoi(argv[1]); // se existir parametro, N = parametro, se não já é 4
 
         aa = (int*)malloc(N*N*sizeof(int)); // aloca continuamente os dados
-        bb = (int*)malloc(N*N*sizeof(int));
         cc = (int*)calloc(N*N, sizeof(int));
 
         a = (int**)malloc(N*sizeof(int*)); 
-        b = (int**)malloc(N*sizeof(int*)); 
         c = (int**)malloc(N*sizeof(int*));
 
         for (i=0; i<N; i++){
-            a[i] = &(aa[i*N]);
-            b[i] = &(bb[i*N]); //referencia cada começo de linha para acesso por [][]
+            a[i] = &(aa[i*N]);//referencia cada começo de linha para acesso por [][]
             c[i] = &(cc[i*N]);
         }
-
-        for (i=0; i<N; i++)
-            for (j=0 ;j<N; j++) { // preenche a e b com 1
-                a[i][j] = 1;  
-                b[i][j] = 1;
-            }
     }
 
     MPI_Bcast(&N, 1, MPI_INT, 0, MPI_COMM_WORLD); // envia e recebe N
     parte = N/tam; // calcula quantas linhas da matriz cada um vai calcular/receber
+
+    bb = (int*)malloc(N*N*sizeof(int));
+    b = (int**)malloc(N*sizeof(int*));    
+    for (i=0; i<N; i++) 
+        b[i] = &(bb[i*N]); 
+
+    if(rank == 0){
+        for (i=0; i<N; i++)
+        for (j=0 ;j<N; j++) { // proc 0 preenche a e b com 1
+            a[i][j] = 1;  
+            b[i][j] = 1;
+        }
+    }
 
     aa_loc = (int*)malloc(parte*N*sizeof(int));
     cc_loc = (int*)calloc(parte*N, sizeof(int)); // cria continuo na memoria
