@@ -4,16 +4,10 @@
 
 int main(int argc, char * argv[])
 {
-    int **a;
-    int **b;
-    int **c;
-    int **a_loc;
-    int **c_loc;
-    int *aa;
-    int *bb;
-    int *cc;
-    int *aa_loc;
-    int *cc_loc;
+    int **a, **b, **c;
+    int *aa, *bb, *cc;
+    int *aa_loc, *cc_loc;
+    int **a_loc, **c_loc;
 
     int tagA = 1; // enviar matriz A
     int tagB = 2; // enviar matriz B NAO UTILIZADO, COMM COLETIVA TEM TAGS IMPLICITAS
@@ -80,13 +74,13 @@ int main(int argc, char * argv[])
     for (i=0; i<parte; i++)
         for (j=0; j<N; j++)
                 for (k=0; k<N; k++) 
-                    c_loc[i][j] = c_loc[i][j] + a_loc[i][k]*b[k][j];
+                    c_loc[i][j] = c_loc[i][j] + a_loc[i][k]*b[k][j]; // calcula com as matrizes locais a multiplicacao
             
     MPI_Gather(cc_loc, N*parte, MPI_INT, cc, N*parte, MPI_INT, 0, MPI_COMM_WORLD);
     
-    if(rank ==0){
+    if(rank ==0)
         printf("C[%d][%d] = %d\n", N-1, N-1, c[N-1][N-1]);
-    }
+    
     MPI_Finalize();
     return 0;
 }
