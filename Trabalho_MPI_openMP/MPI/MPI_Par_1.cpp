@@ -70,8 +70,12 @@ double findClusterCoefficient(uint** M, uint n, int tam, int rank)
 
 	neighbors.reserve(n);
 
-	// For each node
-	for (uint i = 0; i < n; ++i) {
+	int inicio = parte*rank;
+	int fim = parte*(rank+1);
+	if(rank == tam-1) // se for o ultimo, vai ate n EVITA ITENS SOBRANDO
+		fim = n;
+
+	for(int i = inicio; i < fim; i++) {
 		// Set things up for this iteration
 		neighbors.clear();
 		uint n_triangles = 0;
@@ -90,7 +94,7 @@ double findClusterCoefficient(uint** M, uint n, int tam, int rank)
 		const uint nei_len = neighbors.size();
 		for (uint j = 0; j < nei_len; ++j) {
 			uint u = neighbors[j];
-			for (uint k = j; k < nei_len; k ++) {
+			for (uint k = j+1; k < nei_len; k ++) {
 				uint v = neighbors[k];
 				if (M[u][v]) {
 					++n_triangles;
@@ -99,10 +103,11 @@ double findClusterCoefficient(uint** M, uint n, int tam, int rank)
 		}
 		partial_cc += 2 * n_triangles / double(nei_len * (nei_len - 1));
 	}
+	
 	MPI_Reduce(&partial_cc, &global_cc, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
 	if(rank == 0)
-		return partial_cc / n;
+		return global_cc / n;
 	else
 		return 0;
 }
