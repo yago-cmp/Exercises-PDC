@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
 	}
 	if(proc==0)
   		gettimeofday(&tstart, NULL);
-
+// Medição do Tempo-------------------------------------
 	MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD); // 0 -> X, valor de n
 
 	if(proc != 0)
@@ -146,12 +146,10 @@ int main(int argc, char* argv[])
 	if(proc != 0)
 		valores = (uint*)malloc(offsets[n]*sizeof(uint)); // cria o vetor de destinos das arestas com >> 2m << espaços 
 
-	MPI_Bcast(valores, 2*offsets[n], MPI_UNSIGNED, 0, MPI_COMM_WORLD); // 0 -> X, vetor de valores
+	MPI_Bcast(valores, offsets[n], MPI_UNSIGNED, 0, MPI_COMM_WORLD); // 0 -> X, vetor de valores
 	
-// Função Principal ------------------------------------
-	float clustering_coefficient = findClusterCoefficient(offsets, valores, n, tam, proc);
+	float clustering_coefficient = findClusterCoefficient(offsets, valores, n, tam, proc); // Função Principal -------------------
 // ------------------------------------------------------
-
 	if(proc==0){
 		gettimeofday(&tend, NULL);
 

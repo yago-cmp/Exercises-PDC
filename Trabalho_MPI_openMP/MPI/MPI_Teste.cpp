@@ -9,13 +9,6 @@ struct timeval tstart, tend;
 
 typedef unsigned int uint;
 
-template <class _STREAM> void TurnExceptionsOn(_STREAM& stream)
-{
-        stream.exceptions(std::ios_base::badbit |
-                          std::ios_base::failbit |
-                          std::ios_base::eofbit);
-}
-
 uint** makeSquareMatrix(uint n)
 {
 	if (n == 0) {
@@ -43,10 +36,8 @@ uint** readFile(std::istream& input, uint& n)
 	uint u, v, k;
 
 	n = 0;
-	TurnExceptionsOn(input);
 
 	input >> n;
-	input.exceptions(std::ios_base::goodbit);
 
 	M = makeSquareMatrix(n);
 	if (M == NULL) {
@@ -134,27 +125,15 @@ int main(int argc, char* argv[])
     std::ifstream input;
     std::ofstream output;
 
-	TurnExceptionsOn(input);
-	TurnExceptionsOn(output);
-
 	if(rank == 0){
-		if (argc != 3) {
-					std::cerr << "ERROR: Wrong number of arguments.\n" <<
-								"Usage: ./clustering_coefficient INPUT OUTPUT\n" 
-					<< std::endl;
-					exit(EXIT_FAILURE);
-		}
-
 		input.open(argv[1]);  
 		output.open(argv[2]);
-
 		matrix = readFile(input, n);
-		if (matrix == NULL) {
-			std::cerr << "Error creating square matrix" << std::endl;
-			return 1;
-		}
 	}
-	
+
+	if(rank==0)
+  		gettimeofday(&tstart, NULL);
+// Medição do Tempo-------------------------------------
 	MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD); // envia e recebe N
 
 	if(rank != 0)
@@ -162,11 +141,9 @@ int main(int argc, char* argv[])
 
 	MPI_Bcast(matrix[0], n*n, MPI_UNSIGNED, 0, MPI_COMM_WORLD); // matriz é enviada
 	
-	if(rank==0)
-  		gettimeofday(&tstart, NULL);
-//--------- Mede o tempo da função abaixo ---------------
+
 	float clustering_coefficient = findClusterCoefficient(matrix, n, tam, rank);
-//-------------------------------------------------------
+// -------------------------------------------------------
 	if(rank==0){
 		gettimeofday(&tend, NULL);
 		long tempo = (tend.tv_sec * 1000000 + tend.tv_usec)-(tstart.tv_sec * 1000000 + tstart.tv_usec);
