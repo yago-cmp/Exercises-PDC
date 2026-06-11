@@ -57,8 +57,8 @@ void lerArq(std::istream& input, uint* n_ref, uint** offsets_ref, uint** valores
     *n_ref = n;
 }
 
-// FUNÇÃO PRINCIPAL ----------------------------------------------
 
+// FUNÇÃO PRINCIPAL ----------------------------------------------
 double findClusterCoefficient(uint* offsets, uint* valores, uint n)
 {
 	double partial_cc = 0.0;
@@ -71,7 +71,6 @@ double findClusterCoefficient(uint* offsets, uint* valores, uint n)
 
 		#pragma omp for schedule(dynamic, 64) // for dinamico, 64 chunk size
 			for (uint i = 0; i < n; ++i) { // para cada vértice:
-
 				neighbors.clear(); // zera os vizinhos
 				n_triangles = 0; // zera os triangulos
 
@@ -101,7 +100,6 @@ double findClusterCoefficient(uint* offsets, uint* valores, uint n)
 	return partial_cc / n;
 }
 // ---------------------------------------------------------------------------
-
 
 
 int main(int argc, char* argv[])
