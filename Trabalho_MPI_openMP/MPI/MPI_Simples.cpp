@@ -92,8 +92,10 @@ double findClusterCoefficient(uint* offsets, uint* valores, uint n, int tam, int
 			for (uint k = j+1; k < nei_len; k ++) { // e outro vizinho v de i
 				uint v = neighbors[k];
 				for(int h = offsets[u]; h < offsets[u+1]; h++) // itera sobre as conexoes de u
-					if (valores[h] == v) // se v é uma das conexoes de u 
-						++n_triangles; // soma a qtd de triangulos
+					if (valores[h] == v){ // se v é uma das conexoes de u 
+							++n_triangles; // soma a qtd de triangulos
+							break;
+					}	
 			}
 		}
 		partial_cc += 2 * n_triangles / double(nei_len * (nei_len - 1)); // usa a qtd de triangulos na vizinhanca de i e calcula o coeficiente de agrupamento parcial
@@ -159,5 +161,7 @@ int main(int argc, char* argv[])
 	}
 
 	MPI_Finalize();
+	free(offsets);
+	free(valores);
 	return 0;
 }
