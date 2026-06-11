@@ -8,19 +8,6 @@ struct timeval tstart, tend;
 
 typedef unsigned int uint;
 
-/**Turn on exception reporting for a stream
- *
- * Any read or write error on stream will raise an exception -- no error
- * will be mistakenbly silenced!
- */
-template <class _STREAM> void TurnExceptionsOn(_STREAM& stream)
-{
-        stream.exceptions(std::ios_base::badbit |
-                          std::ios_base::failbit |
-                          std::ios_base::eofbit);
-}
-
-
 /**Make a N x N matrix.
  *
  * Care must be taken free'ing matrixes create using this function.
@@ -79,11 +66,8 @@ uint** readFile(std::istream& input, uint& n)
 	// Read number of nodes -- MUST be in input's first line 
 	// If any error occour while we read the first line, throw an exception
 	n = 0;
-	TurnExceptionsOn(input);
 	input >> n;
-	// Turned Exception Reporting OFF - it was kinda silly but whatever.
-	input.exceptions(std::ios_base::goodbit);
-	// Allocate matrix
+
 	M = makeSquareMatrix(n);
 	if (M == NULL) {
 		return NULL;
@@ -161,27 +145,13 @@ int main(int argc, char* argv[])
 	uint** matrix = NULL;
 	uint n;
 
-        std::ifstream input;
-        std::ofstream output;
-
-	TurnExceptionsOn(input);
-	TurnExceptionsOn(output);
-
-	if (argc != 3) {
-                std::cerr << "ERROR: Wrong number of arguments.\n" <<
-                             "Usage: ./clustering_coefficient INPUT OUTPUT\n" 
-			     << std::endl;
-                exit(EXIT_FAILURE);
-	}
+	std::ifstream input;
+	std::ofstream output;
 
 	input.open(argv[1]);  
 	output.open(argv[2]);
 
 	matrix = readFile(input, n);
-	if (matrix == NULL) {
-		std::cerr << "Error creating square matrix" << std::endl;
-		return 1;
-	}
 
   	gettimeofday(&tstart, NULL);
 //--------- Mede o tempo da função abaixo ---------------
