@@ -3,69 +3,109 @@
 #include <string.h>
 #include <vector>
 #include <sys/time.h>
-#include <omp.h>
 
 struct timeval tstart, tend;
 
 typedef unsigned int uint;
 
-void lerArq(std::istream& input, uint* n_ref, uint** offsets_ref, uint** valores_ref) // FUNCAO REESCRITA PARA CSR -----------------------------------
+/**Turn on exception reporting for a stream
+ *
+ * Any read or write error on stream will raise an exception -- no error
+ * will be mistakenbly silenced!
+ */
+template <class _STREAM> void TurnExceptionsOn(_STREAM& stream)
 {
-	uint u, v, k; // iteradores para o arquivo
-	uint n = 0; // qtd de vertices
-    uint m = 0; // qtd de arestas
-
-	input >> n; // guarda a qtd de vertices
-
-    uint* graus = (uint*)calloc(n, sizeof(uint)); // grau de cada vértice
-
-    while (input >> u >> v >> k) { // conta o grau de cada vertice e a qtd de arestas
-        graus[u]++;
-        graus[v]++;
-        m++;
-	}
-
-    uint* offsets = (uint*)malloc((n+1)*sizeof(uint)); // cria o vetor de offsets com n+1 espaços (guarda m em offsets[n])
-    uint* valores = (uint*)malloc((2*m)*sizeof(uint)); // cria o vetor de destinos das arestas com 2m espaços (o grafo é bidirecional)
-
-    // o offset de cada um dos vértices é o anterior + o grau do vértice anterior
-    offsets[0] = 0;
-    for(int i =0; i < n; i++)
-        offsets[i+1] = offsets[i] + graus[i]; // na ultima iteracao, offsets[n] guarda 2m
-
-    input.clear();                     
-    input.seekg(0, std::ios::beg); // volta para o início do arquivo
-    input >> n; // pula o n
-
-    //o preenchimento é do começo ao fim, é preciso um vetor para guardar a posicao de cada vertice
-    uint* posicoes = (uint*)malloc(n*sizeof(uint));
-    for(int i = 0; i < n; i++)
-        posicoes[i] = offsets[i]; // começa no offset inicial de cada um
-
-    while (input >> u >> v >> k) { // le novamente o arquivo todo
-        valores[posicoes[u]] = v; // salva nos valores de u o vertice v
-        valores[posicoes[v]] = u; // salva nos valores de v o vertice u
-        posicoes[u]++; 
-        posicoes[v]++; // anda um para cada aresta encontrada 
-	}    
-
-    free(graus);
-    free(posicoes); // desaloca os auxiliares
-    
-    *offsets_ref = offsets; // retorna como referencia os vetores
-    *valores_ref = valores;
-    *n_ref = n;
+        stream.exceptions(std::ios_base::badbit |
+                          std::ios_base::failbit |
+                          std::ios_base::eofbit);
 }
 
 
-// FUNÇÃO PRINCIPAL ----------------------------------------------
-double findClusterCoefficient(uint* offsets, uint* valores, uint n)
+/**Make a N x N matrix.
+ *
+ * Care must be taken free'ing matrixes create using this function.
+ * Correction: just don't delete[] this matrix. If you **REALLLY** want
+ * to free this matrix you've got to proceed as follows:
+ *
+ * 	uint** M = makeSquareMatrix(n); 
+ * 	uint* store = &M[0][0]
+ * 	uint* M_rows = &M[0]; 
+ * 	delete[] store;
+ * 	delete[] M_rows;
+ *
+ * @eturn The square matrix or NULL on non-fatal errors.
+ *
+ * @warning May throw an exception if allocation fails.
+ */
+uint** makeSquareMatrix(uint n)
 {
+	if (n == 0) {
+		return NULL;
+	}
+
+	uint** B = NULL;
+	uint* store = NULL;
+
+	// Allocate matrix
+	store = new uint[n*n];
+	// Clear it...
+	memset(store, 0x00, n * n * sizeof(uint));
+	// Setup array B
+	B = (uint**) new uint*[n];
+	for (int row = 0; row < n; ++row) {
+		B[row] = &store[row * n];
+	}
+
+	return B;
+}
+
+/***Read a undirected graph from @p input
+ *
+ * @param input Stream from where the graph is read.
+ * @param n nunber of nodes in the graph. It is returned by reference to
+ * 	the callee.
+ *
+ * @return A incidence matrix (square matrix w/ n rows) with the graph.
+ *
+ * @warning Errors reading the number of nodes in the graph will throw an
+ * 	exception.
+ */
+uint** readFile(std::istream& input, uint& n)
+{
+	uint** M = NULL;
+	uint u, v, k;
+
+	// Read number of nodes -- MUST be in input's first line 
+	// If any error occour while we read the first line, throw an exception
+	n = 0;
+	TurnExceptionsOn(input);
+	input >> n;
+	// Turned Exception Reporting OFF - it was kinda silly but whatever.
+	input.exceptions(std::ios_base::goodbit);
+	// Allocate matrix
+	M = makeSquareMatrix(n);
+	if (M == NULL) {
+		return NULL;
+	}
+	// Read graph;
+	while (input >> u >> v >> k) {
+		M[u][v] = k;
+		M[v][u] = k;
+	}
+
+	return M;
+}
+
+// FUNÇÃO PRINCIPAL ----------------------------------------------
+
+double findClusterCoefficient(uint** M, uint n)
+{
+
+	double partial_cc = 0.0;
 	double global_cc = 0.00;
 
-	#pragma omp parallel num_threads(4) shared(offsets, valores, n, global_cc)
+	#pragma omp parallel num_threads(4) shared(M, n)
 	{
-		double partial_cc = 0.0;
 		std::vector<uint> neighbors; // cria uma vizinhança para cada thread
 		uint n_triangles = 0; // cria uma contagem de triangulos para cada thread
 		neighbors.reserve(n); // reserva até n vizinhos
@@ -75,8 +115,9 @@ double findClusterCoefficient(uint* offsets, uint* valores, uint n)
 				neighbors.clear(); // zera os vizinhos
 				n_triangles = 0; // zera os triangulos
 
-				for (uint j = offsets[i]; j < offsets[i+1]; j++) // itera sobre os vizinhos de i
-					neighbors.push_back(valores[j]); // e salva eles
+				for (uint j = 0; j < n; ++j) //varre a linha i da matriz
+					if ( i != j && M[i][j]) //caso i tenha uma conexão com j (M[i][j] = 1)
+						neighbors.push_back(j); //adiciona j ao vetor de vizinhos de i
 
 				const uint n_viz = neighbors.size(); //No de vizinhos de i
 
@@ -87,44 +128,55 @@ double findClusterCoefficient(uint* offsets, uint* valores, uint n)
 					uint u = neighbors[j]; // u = vizinho de i
 					for (uint k = j+1; k < n_viz; k ++) { // para cada Outro vizinho de i
 						uint v = neighbors[k]; // v = outro vizinho de i
-						for(int h = offsets[u]; h < offsets[u+1]; h++) // itera sobre as conexoes de u
-							if (valores[h] == v){ // se v é uma das conexoes de u 
-									++n_triangles; // soma a qtd de triangulos
-									break;
-							}	
+						n_triangles += M[u][v]; // se u e v são vizinhos entre si, temos um triângulo
+						// M[u][v] é sempre 0 ou 1
 					}
 				}
-				partial_cc += 2 * n_triangles / double(n_viz * (n_viz - 1));
+				partial_cc += 2 * n_triangles / double(n_viz * (n_viz - 1)); //indicativo de reduction
 			}
-		#pragma omp critical
-		{
-			global_cc += partial_cc;
-		}
 	} // termino da regiao paralela, partial_cc se junta somando em global usando critical
+
+	#pragma omp critical
+	{
+		global_cc += partial_cc;
+	}
+
 	return global_cc / n;
 }
 // ---------------------------------------------------------------------------
 
 
+
 int main(int argc, char* argv[])
 {
-    // CSR -------------------------
-	uint* offsets; // tamanho n+1
-    uint* valores; // tamanho 2m
-	uint n; 
-    // ------------------------------
+	uint** matrix = NULL;
+	uint n;
 
-	std::ifstream input;
-	std::ofstream output;
+        std::ifstream input;
+        std::ofstream output;
+
+	TurnExceptionsOn(input);
+	TurnExceptionsOn(output);
+
+	if (argc != 3) {
+                std::cerr << "ERROR: Wrong number of arguments.\n" <<
+                             "Usage: ./clustering_coefficient INPUT OUTPUT\n" 
+			     << std::endl;
+                exit(EXIT_FAILURE);
+	}
 
 	input.open(argv[1]);  
 	output.open(argv[2]);
 
-	lerArq(input, &n, &offsets, &valores); // extrai n, os offsets e os valores do arquivo
+	matrix = readFile(input, n);
+	if (matrix == NULL) {
+		std::cerr << "Error creating square matrix" << std::endl;
+		return 1;
+	}
 
   	gettimeofday(&tstart, NULL);
 //--------- Mede o tempo da função abaixo ---------------
-	float clustering_coefficient = findClusterCoefficient(offsets, valores, n);
+	float clustering_coefficient = findClusterCoefficient(matrix, n);
 //-------------------------------------------------------
 	gettimeofday(&tend, NULL);
 
@@ -132,8 +184,4 @@ int main(int argc, char* argv[])
 
 	output << clustering_coefficient << std::endl; // resultado na file
 	std::cout << tempo; 
-
-	free(offsets);
-	free(valores);
-	return 0;
 }
