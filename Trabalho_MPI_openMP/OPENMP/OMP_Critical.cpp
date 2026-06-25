@@ -101,11 +101,11 @@ uint** readFile(std::istream& input, uint& n)
 double findClusterCoefficient(uint** M, uint n)
 {
 
-	double partial_cc = 0.0;
 	double global_cc = 0.00;
 
 	#pragma omp parallel num_threads(4) shared(M, n)
 	{
+		double partial_cc = 0.0;
 		std::vector<uint> neighbors; // cria uma vizinhança para cada thread
 		uint n_triangles = 0; // cria uma contagem de triangulos para cada thread
 		neighbors.reserve(n); // reserva até n vizinhos
