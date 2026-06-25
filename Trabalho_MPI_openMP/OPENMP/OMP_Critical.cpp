@@ -134,13 +134,11 @@ double findClusterCoefficient(uint** M, uint n)
 				}
 				partial_cc += 2 * n_triangles / double(n_viz * (n_viz - 1)); //indicativo de reduction
 			}
+		#pragma omp critical
+		{
+			global_cc += partial_cc;
+		}
 	} // termino da regiao paralela, partial_cc se junta somando em global usando critical
-
-	#pragma omp critical
-	{
-		global_cc += partial_cc;
-	}
-
 	return global_cc / n;
 }
 // ---------------------------------------------------------------------------
