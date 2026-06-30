@@ -134,9 +134,8 @@ int main(int argc, char* argv[])
 		input.open(argv[1]);  // entrada -> arquivo "100_500.txt" ou similar
 		output.open(argv[2]); // saida -> resultado do coeficiente para conferir "resultado.txt"
 		lerArq(input, &n, &offsets, &valores); // extrai n, os offsets e os valores do arquivo
-	}
-	if(proc==0)
   		gettimeofday(&tstart, NULL);
+	}
 // Medição do Tempo-------------------------------------
 	MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD); // 0 -> X, valor de n
 

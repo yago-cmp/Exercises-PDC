@@ -129,10 +129,8 @@ int main(int argc, char* argv[])
 		input.open(argv[1]);  
 		output.open(argv[2]);
 		matrix = readFile(input, n);
-	}
-
-	if(rank==0)
   		gettimeofday(&tstart, NULL);
+	}
 // Medição do Tempo-------------------------------------
 	MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD); // envia e recebe N
 
